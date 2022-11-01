@@ -15,12 +15,12 @@ BEGIN
         JOIN node_fx_logic fx on fx.NodeID = n.NodeID where n.NodeType In ('FireExtinguisher') and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal));
     SET OfflineDevices = (Select count(*) As OfflineDevices from node_details as n
         JOIN node_fx_logic fx on fx.NodeID = n.NodeID where n.NodeType In ('FireExtinguisher') and n.NodeOnlineStatus = 0 and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal));
-    /*
-    SET AlertDevicesExitEmerg = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
-    on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In ('EmergLight','ExitLight') and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal) where alarm.IsResolved is null and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
-    and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal));
-    */
-    SET AlertDevicesFire = (Select count(*) As AlertDevices from node_fx_logic where Leak1 = 1 or Leak2 = 1 or ForeignObj = 1 or Missing = 1 or Blockage = 1 and NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal));
+
+    SET AlertDevicesFire = (SELECT count(*) As AlertDevices FROM node_fx_logic As fx JOIN node_details As n on n.NodeID = fx.NodeID 
+    and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+    where n.NodeType = 'FireExtinguisher' and fx.Leak1 = 1 or fx.Leak2 = 1 or fx.ForeignObj = 1 or fx.Missing = 1 or fx.Blockage = 1
+    and n.NetworkID in (SELECT un.NetworkID FROM users_network un where un.UserID COLLATE utf8mb4_general_ci  = userIDVal));
+        
     SET LowBattery = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
     on n.NodeID = alarm.NodeID 
     JOIN node_fx_logic fx on fx.NodeID = n.NodeID
