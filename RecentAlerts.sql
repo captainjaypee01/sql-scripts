@@ -1,6 +1,6 @@
 CREATE DEFINER=`root`@`localhost` PROCEDURE `RecentAlerts`(
-nodeType varchar(255),
-userIDVal varchar(255)
+userIDVal varchar(255),
+nodeType varchar(255)
 )
 BEGIN
 
@@ -17,7 +17,8 @@ create temporary table tblrecentalert
 insert into tblrecentalert(alert)
 Select Descr from node_details As n JOIN node_alarm_log As alarm 
 on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (nodeType) 
-where alarm.IsResolved is null and n.NetworkID in (SELECT NetworkID FROM smartnew.users_network where UserID = userIDVal)
+where alarm.IsResolved is null and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+and n.Status = 'Active'
 order by updated_at desc LIMIT 3;
 
 SET Alert1 = ifnull((select alert from tblrecentalert where id = 1), 'No Alert');
