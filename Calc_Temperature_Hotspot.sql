@@ -10,12 +10,12 @@ DECLARE cursor_Val VARCHAR(255);
 DECLARE cursor_ValTwo VARCHAR(255);
 DECLARE done INT DEFAULT FALSE;
 DECLARE cursor_maximum CURSOR FOR SELECT n.BuildingName, n.SectorName, Max(SensorValue02) Maximum, Min(SensorValue02) Minimum FROM node_latest_readings As reading 
-JOIN node_details As n on n.NodeID = reading.NodeID and n.NetworkID = reading.NetworkID
+JOIN node_details As n on n.NodeID = reading.NodeID and n.NetworkID = reading.NetworkID and n.Status = 'Active'
 group by n.BuildingName,n.SectorName, SensorValue02, n.NodeType, reading.updated_at, n.NetworkID having n.NodeType = 'FireExtinguisher'
 and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci  = userIDVal);
 
 DECLARE cursor_current CURSOR FOR SELECT n.BuildingName, n.SectorName, Max(SensorValue02) Maximum FROM node_latest_readings As reading 
-JOIN node_details As n on n.NodeID = reading.NodeID and n.NetworkID = reading.NetworkID
+JOIN node_details As n on n.NodeID = reading.NodeID and n.NetworkID = reading.NetworkID and n.Status = 'Active'
 group by n.BuildingName,n.SectorName, SensorValue02, n.NodeType, reading.updated_at, n.NetworkID 
 having n.NodeType = 'FireExtinguisher' and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci  = userIDVal);
 
