@@ -24,7 +24,7 @@ DECLARE AlertDevicesFire INT;
 	SET AlertDevicesFire = (Select count(*) As AlertDevices from node_fx_logic as fx
     JOIN node_details As n on n.NodeID = fx.NodeID
 	where n.Status = 'Active'
-    And Leak1 = 1 or Leak2 = 1 or ForeignObj = 1 or Missing = 1 and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal));
+    And Leak2 = 1 or ForeignObj = 1 or Missing = 1 or Blockage = 1 and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal));
 
         
 	SET AlertDevices = AlertDevicesFire;

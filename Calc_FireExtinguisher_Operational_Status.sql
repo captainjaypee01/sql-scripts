@@ -12,8 +12,8 @@ BEGIN
     
     DECLARE cursor_alert CURSOR FOR SELECT count(*) As AlertDevice, BuildingName FROM node_fx_logic As fx JOIN node_details As n on n.NodeID = fx.NodeID 
     and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
-    group by n.BuildingName, n.NodeType, n.NodeID, fx.NodeID, fx.Leak1, fx.Leak2, fx.ForeignObj, fx.Missing, fx.Blockage, n.NetworkID   
-    having n.NodeType = 'FireExtinguisher' and fx.Leak1 = 1 or fx.Leak2 = 1 or fx.ForeignObj = 1 or fx.Missing = 1 or fx.Blockage = 1
+    group by n.BuildingName, n.NodeType, n.NodeID, fx.NodeID, fx.Leak2, fx.ForeignObj, fx.Missing, fx.Blockage, n.NetworkID   
+    having n.NodeType = 'FireExtinguisher' and fx.Leak2 = 1 or fx.ForeignObj = 1 or fx.Missing = 1 or fx.Blockage = 1
     and n.NetworkID in (SELECT un.NetworkID FROM users_network un where un.UserID COLLATE utf8mb4_general_ci  = userIDVal);
     
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
