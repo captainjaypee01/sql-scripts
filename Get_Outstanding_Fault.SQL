@@ -1,58 +1,138 @@
 CREATE DEFINER=`root`@`localhost` PROCEDURE `Get_Outstanding_Fault`(
 	userIDVal varchar(255),
 	timezoneOffset varchar(255),
-	NodeTypeValOne varchar(255),
-	NodeTypeValTwo varchar(255),
-	NodeTypeValThree varchar(255)
+    in NodeTypes varchar(255),
+    inital bool
 )
 BEGIN
 
-	SELECT * FROM ((SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
-	n.ServiceID, n.NodeType, alarm.Descr As FaultDesc, alarm.ResolvedDescription As ResolvedDesc,
-    DATE_FORMAT(CONVERT_TZ(alarm.created_at, '+00:00', timezoneOffset), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
-    ifnull(DATE_FORMAT(CONVERT_TZ(alarm.ResolvedTime, '+00:00', timezoneOffset), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
-	FROM node_alarm_log As alarm 
-    INNER JOIN (SELECT NodeID, NetworkID, max(createdDate) from (SELECT a.NodeID, a.NetworkID, a.Descr, a.created_at as createdDate, a.IsResolved FROM node_alarm_log As a 
-	GROUP BY a.NodeID, a.NetworkID, a.Descr, a.IsResolved
-	having a.Descr = 'Node is Offline'
-	and a.IsResolved is null ) alarm3 ) alarm2	on alarm2.NodeID = alarm.NodeID and alarm2.createdDate = alarm.created_at
-    and alarm2.NetworkID = alarm.NetworkID
-	JOIN node_details As n on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID
-	where n.NodeType In (NodeTypeValOne,NodeTypeValTwo,NodeTypeValThree) and alarm.IsResolved is null 
-	and n.Status = 'Active'
-	and alarm.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
-    group by alarm.NodeID ) 
-    UNION (SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
-	n.ServiceID, n.NodeType, alarm.Descr As FaultDesc, alarm.ResolvedDescription As ResolvedDesc,
-    DATE_FORMAT(CONVERT_TZ(alarm.created_at, '+00:00', timezoneOffset), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
-    ifnull(DATE_FORMAT(CONVERT_TZ(alarm.ResolvedTime, '+00:00', timezoneOffset), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
-	FROM node_alarm_log As alarm 
-    INNER JOIN (SELECT NodeID, NetworkID, max(createdDate) from (SELECT a.NodeID, a.NetworkID, a.Descr, a.created_at as createdDate, a.IsResolved FROM node_alarm_log As a 
-	GROUP BY a.NodeID, a.NetworkID, a.Descr, a.IsResolved
-	having a.Descr = 'Low Battery'
-	and a.IsResolved is null ) alarm3 ) alarm2	on alarm2.NodeID = alarm.NodeID and alarm2.createdDate = alarm.created_at
-    and alarm2.NetworkID = alarm.NetworkID
-	JOIN node_details As n on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID
-	where n.NodeType In (NodeTypeValOne,NodeTypeValTwo,NodeTypeValThree) and alarm.IsResolved is null 
-	and n.Status = 'Active'
-	and alarm.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
-    group by alarm.NodeID ) 
-    UNION (SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
-	n.ServiceID, n.NodeType, alarm.Descr As FaultDesc, alarm.ResolvedDescription As ResolvedDesc,
-    DATE_FORMAT(CONVERT_TZ(alarm.created_at, '+00:00', timezoneOffset), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
-    ifnull(DATE_FORMAT(CONVERT_TZ(alarm.ResolvedTime, '+00:00', timezoneOffset), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
-	FROM node_alarm_log As alarm 
-    INNER JOIN (SELECT NodeID, NetworkID, max(createdDate) from (SELECT a.NodeID, a.NetworkID, a.Descr, a.created_at as createdDate, a.IsResolved FROM node_alarm_log As a 
-	GROUP BY a.NodeID, a.NetworkID, a.Descr, a.IsResolved
-	having a.Descr Not In ('Node is Offline', 'Low Battery')
-	and a.IsResolved is null ) alarm3 ) alarm2	on alarm2.NodeID = alarm.NodeID and alarm2.createdDate = alarm.created_at
-    and alarm2.NetworkID = alarm.NetworkID
-	JOIN node_details As n on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID
-	where n.NodeType In (NodeTypeValOne,NodeTypeValTwo,NodeTypeValThree) and alarm.IsResolved is null 
-	and n.Status = 'Active'
-	and alarm.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
-    group by alarm.NodeID )) As c order by ServiceID;
-
+	IF inital
+	THEN
+		(SELECT * FROM (
+				(
+					SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
+						n.ServiceID, n.NodeType, 
+						al.Descr As FaultDesc,
+						al.ResolvedDescription As ResolvedDesc,
+						DATE_FORMAT(CONVERT_TZ(al.created_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
+						ifnull(DATE_FORMAT(CONVERT_TZ(al.ResolvedTime, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
+					FROM node_alarm_log As al 
+					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
+					INNER JOIN (SELECT nodeid, max(created_at) as createdDate FROM node_alarm_log GROUP BY nodeid) alarm2
+							on al.NodeID = alarm2.nodeid and al.created_at = alarm2.createdDate
+					where FIND_IN_SET (n.NodeType, NodeTypes)
+					and al.IsResolved is null 
+					and al.Descr not in ('Low Battery', 'Node is Offline')
+					and n.Status = 'Active'
+					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
+					
+					group by al.NodeID
+					order by al.id desc
+				)
+			UNION
+				(
+					SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
+						n.ServiceID, n.NodeType, 
+						al.Descr As FaultDesc,
+						al.Descr As ResolvedDesc,
+						DATE_FORMAT(CONVERT_TZ(al.created_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
+						ifnull(DATE_FORMAT(CONVERT_TZ(al.ResolvedTime, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
+					FROM node_alarm_log As al 
+					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
+					where FIND_IN_SET (n.NodeType, NodeTypes)
+					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
+					and n.Status = 'Active'
+					and al.Descr = 'Low Battery'
+					and al.IsResolved is null 
+					group by al.NodeID
+					order by al.id desc
+				)
+			UNION
+				(
+					SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
+						n.ServiceID, n.NodeType, 
+						al.Descr As FaultDesc,
+						al.Descr As ResolvedDesc,
+						DATE_FORMAT(CONVERT_TZ(al.created_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
+						ifnull(DATE_FORMAT(CONVERT_TZ(al.ResolvedTime, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
+					FROM node_alarm_log As al 
+					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
+					where FIND_IN_SET (n.NodeType, NodeTypes)
+					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
+					and n.Status = 'Active'
+					and al.Descr = 'Node is Offline'
+					and al.IsResolved is null 
+					group by al.NodeID
+					order by al.id desc
+				)
+			) 
+			as combined
+			order by combined.NodeName asc
+            limit 30
+		);
+	ELSE
+		(SELECT * FROM (
+				(
+					SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
+						n.ServiceID, n.NodeType, 
+						al.Descr As FaultDesc,
+						al.ResolvedDescription As ResolvedDesc,
+						DATE_FORMAT(CONVERT_TZ(al.created_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
+						ifnull(DATE_FORMAT(CONVERT_TZ(al.ResolvedTime, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
+					FROM node_alarm_log As al 
+					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
+					INNER JOIN (SELECT nodeid, max(created_at) as createdDate FROM node_alarm_log GROUP BY nodeid) alarm2
+							on al.NodeID = alarm2.nodeid and al.created_at = alarm2.createdDate
+					where FIND_IN_SET (n.NodeType, NodeTypes)
+					and al.IsResolved is null 
+					and al.Descr not in ('Low Battery', 'Node is Offline')
+					and n.Status = 'Active'
+					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
+					
+					group by al.NodeID
+					order by al.id desc
+				)
+			UNION
+				(
+					SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
+						n.ServiceID, n.NodeType, 
+						al.Descr As FaultDesc,
+						al.Descr As ResolvedDesc,
+						DATE_FORMAT(CONVERT_TZ(al.created_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
+						ifnull(DATE_FORMAT(CONVERT_TZ(al.ResolvedTime, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
+					FROM node_alarm_log As al 
+					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
+					where FIND_IN_SET (n.NodeType, NodeTypes)
+					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
+					and n.Status = 'Active'
+					and al.Descr = 'Low Battery'
+					and al.IsResolved is null 
+					group by al.NodeID
+					order by al.id desc
+				)
+			UNION
+				(
+					SELECT distinct n.NodeName, n.NodeID, n.BuildingName As Building, n.BuildingLevel As Level, n.SectorName As Sector,
+						n.ServiceID, n.NodeType, 
+						al.Descr As FaultDesc,
+						al.Descr As ResolvedDesc,
+						DATE_FORMAT(CONVERT_TZ(al.created_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s') AS CreatedDate,
+						ifnull(DATE_FORMAT(CONVERT_TZ(al.ResolvedTime, '+00:00', '+08:00'), '%Y-%m-%d %H:%i:%s'),'-') As ResolvedDate
+					FROM node_alarm_log As al 
+					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
+					where FIND_IN_SET (n.NodeType, NodeTypes)
+					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID = userIDVal)
+					and n.Status = 'Active'
+					and al.Descr = 'Node is Offline'
+					and al.IsResolved is null 
+					group by al.NodeID
+					order by al.id desc
+				)
+			) 
+			as combined
+			order by combined.NodeName asc
+		);
+	END IF;
 
 
 
