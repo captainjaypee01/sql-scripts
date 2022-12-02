@@ -13,6 +13,7 @@ BEGIN
         and n.NodeType In (NodeTypeOne, NodeTypeTwo) 
 		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
 		where n.Status = 'Active' 
+        and alarm.IsResolved is null
 		and alarm.Descr like '%LampFailure%');
 
 	SET DrainBatteryTestFailed = (Select count(*) As DrainBatteryTestFailed from node_details As n RIGHT JOIN node_alarm_log As alarm 
@@ -20,6 +21,7 @@ BEGIN
         and n.NodeType In (NodeTypeOne, NodeTypeTwo) 
 		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
 		where n.Status = 'Active' 
+        and alarm.IsResolved is null
 		and alarm.Descr like '%DrainBatteryTestFailed%');
         
 	Select DrainBatteryTestFailed As DrainBatteryTestFailed, LampFailure As LampFailure;

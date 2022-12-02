@@ -5,10 +5,14 @@ BEGIN
     DECLARE cursor_BuildingName VARCHAR(255);
     DECLARE cursor_VAL VARCHAR(255);
     DECLARE done INT DEFAULT FALSE;
-    DECLARE cursor_i CURSOR FOR SELECT count(*) As OfflineDevice, BuildingName FROM node_details as n
-            where n.Status = 'Active'
-            and n.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID COLLATE utf8mb4_general_ci  = userIDVal)
-            group by BuildingName, NodeType, NodeOnlineStatus having NodeType = 'FireExtinguisher' and NodeOnlineStatus = 0;
+    DECLARE cursor_i CURSOR FOR (Select count(distinct alarm.NodeID) As OfflineDevice, BuildingName from node_details As n JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In ('FireExtinguisher')
+		where n.Status = 'Active'
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+        and alarm.Descr = 'Node is Offline'
+		group by BuildingName, alarm.NodeID, n.NodeID, alarm.NetworkID, n.NetworkID, n.NodeType, alarm.IsResolved
+		having alarm.IsResolved is null );
     
     DECLARE cursor_alert CURSOR FOR SELECT count(*) As AlertDevice, BuildingName FROM node_fx_logic As fx JOIN node_details As n on n.NodeID = fx.NodeID 
     and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)

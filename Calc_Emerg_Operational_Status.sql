@@ -10,13 +10,17 @@ BEGIN
 	DECLARE cursor_VAL VARCHAR(255);
 	DECLARE done INT DEFAULT FALSE;
 
-	DECLARE cursor_i CURSOR FOR (SELECT count(*) As OfflineDevice, BuildingName FROM node_details as n
+	DECLARE cursor_i CURSOR FOR (Select count(distinct alarm.NodeID) As OfflineDevice, BuildingName from node_details As n JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (NodeTypeOne, NodeTypeTwo)
 		where n.Status = 'Active'
-		group by BuildingName, NodeType, NodeOnlineStatus, NetworkID having NodeType In (NodeTypeOne, NodeTypeTwo) and NodeOnlineStatus = 0
-		and NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal));
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+        and alarm.Descr = 'Node is Offline'
+		group by BuildingName, alarm.NodeID, n.NodeID, alarm.NetworkID, n.NetworkID, n.NodeType, alarm.IsResolved
+		having alarm.IsResolved is null );
 	  
 	DECLARE cursor_alert CURSOR FOR (Select count(distinct alarm.NodeID) As AlertDevice, BuildingName from node_details As n JOIN node_alarm_log As alarm 
-		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In ('EmergLight', 'ExitLight')
+		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (NodeTypeOne, NodeTypeTwo)
 		where n.Status = 'Active'
 		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
 		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
@@ -68,7 +72,10 @@ BEGIN
 				and `NodeType` = 'EmergExitLight';
 				
 				UPDATE `node_operational_status`
-				SET	`Operational` = MonitoredDevice - (Alert + LostConnection)
+				SET	`Operational` = CASE WHEN 
+                        (MonitoredDevice > (Alert + LostConnection)) THEN (MonitoredDevice - (LostConnection + Alert))
+                        ELSE 0
+                    END
 				WHERE `BuildingName` COLLATE utf8mb4_general_ci = cursor_BuildingName
 				and `NodeType` = 'EmergExitLight';
 			
