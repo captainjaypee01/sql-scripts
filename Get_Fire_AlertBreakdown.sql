@@ -3,7 +3,46 @@ userIDVal varchar(255)
 )
 BEGIN
 
-	SELECT CAST(SUM(Leak2 = 1) AS SIGNED ) as Leaked, CAST(sum(ForeignObj) AS SIGNED) AS ForeignObject, CAST(sum(Missing) AS SIGNED) AS Missing, CAST(sum(Blockage) AS SIGNED) As Blockage
-	from node_fx_logic WHERE NetworkID in (SELECT un.NetworkID FROM users_network un where un.UserID COLLATE utf8mb4_general_ci = userIDVal);
-
+	DECLARE Leaked INT;
+	DECLARE ForeignObject INT;
+	DECLARE Missing INT;
+	DECLARE Blockage INT;
+	
+	SET Leaked = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n RIGHT JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID
+        and n.NodeType In ('FireExtinguisher')  and n.NetworkID = alarm.NetworkID
+		where n.Status = 'Active' 
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and alarm.Descr like '%Leak%'
+        and alarm.IsResolved is null
+        );
+        
+	SET ForeignObject = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n RIGHT JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID
+        and n.NodeType In ('FireExtinguisher')  and n.NetworkID = alarm.NetworkID
+		where n.Status = 'Active' 
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and alarm.Descr like '%Foreign Object%'
+        and alarm.IsResolved is null
+        );
+        
+	SET Missing = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n RIGHT JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID
+        and n.NodeType In ('FireExtinguisher')  and n.NetworkID = alarm.NetworkID
+		where n.Status = 'Active' 
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and alarm.Descr like '%Missing%'
+        and alarm.IsResolved is null
+        );
+        
+	SET Blockage = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n RIGHT JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID
+        and n.NodeType In ('FireExtinguisher')  and n.NetworkID = alarm.NetworkID
+		where n.Status = 'Active' 
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and alarm.Descr like '%Blocked%'
+        and alarm.IsResolved is null
+        );
+	
+    SELECT Leaked as Leaked, ForeignObject as ForeignObject, Missing as Missing, Blockage as Blockage;
 END
