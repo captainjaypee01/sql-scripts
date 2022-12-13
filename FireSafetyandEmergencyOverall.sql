@@ -18,26 +18,28 @@ BEGIN
 	SET MonitoredDevices = (Select count(*) As MonitoredDevices from node_details as n 
 		where n.Status = 'Active' and NodeType In (NodeTypeValOne,NodeTypeValTwo,NodeTypeValThree) 
         and NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal));
-	SET OfflineDevices = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
+	SET OfflineDevices = (Select count(distinct alarm.NodeID) As OfflineDevices from node_details As n JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (NodeTypeValOne,NodeTypeValTwo,NodeTypeValThree) and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
 		where alarm.IsResolved is null
         and n.Status = 'Active'
 		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
 		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
 		and alarm.Descr = 'Node is Offline');
-	SET AlertDevicesExitEmerg = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n 
+	SET AlertDevicesExitEmerg = (Select count(distinct alarm.NodeID) As AlertDevicesExitEmerg from node_details As n 
 		JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID 
 		and n.NetworkID = alarm.NetworkID and n.NodeType In ('EmergLight','ExitLight') 
         and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal) 
         where n.Status = 'Active' and alarm.IsResolved is null and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
 		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal));
-	SET AlertDevicesFire = (Select count(*) As AlertDevices from node_fx_logic as fx 
-		JOIN node_details As n 
-		on n.NodeID = fx.NodeID 
-        where Leak2 = 1 or ForeignObj = 1 or Missing = 1 or Blockage = 1
-        and n.Status = 'Active'
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal));
+	SET AlertDevicesFire =  (Select count(distinct alarm.NodeID) As AlertDevicesFire from node_details As n JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In ('FireExtinguisher')
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		where n.Status = 'Active' 
+        and alarm.IsResolved is null
+        and alarm.Descr not in ('Low Battery', 'Node is Offline')
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal));
         
 	SET LowBattery = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (NodeTypeValOne,NodeTypeValTwo,NodeTypeValThree) and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
