@@ -13,8 +13,8 @@ BEGIN
 	DECLARE cursor_i CURSOR FOR (Select count(distinct alarm.NodeID) As OfflineDevice, BuildingName from node_details As n JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (NodeTypeOne, NodeTypeTwo)
 		where n.Status = 'Active'
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
-		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
         and alarm.Descr = 'Node is Offline'
 		group by BuildingName, alarm.NodeID, n.NodeID, alarm.NetworkID, n.NetworkID, n.NodeType, alarm.IsResolved
 		having alarm.IsResolved is null );
@@ -22,8 +22,9 @@ BEGIN
 	DECLARE cursor_alert CURSOR FOR (Select count(distinct alarm.NodeID) As AlertDevice, BuildingName from node_details As n JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (NodeTypeOne, NodeTypeTwo)
 		where n.Status = 'Active'
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
-		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+        and alarm.Descr not in ('Low Battery', 'Node is Offline')
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci  = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID  COLLATE utf8mb4_general_ci = userIDVal)
 		group by BuildingName, alarm.NodeID, n.NodeID, alarm.NetworkID, n.NetworkID, n.NodeType, alarm.IsResolved
 		having alarm.IsResolved is null );
 

@@ -25,7 +25,7 @@ BEGIN
 	
     SET AlertDevices = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (nodeTypeValue)
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
 		where alarm.IsResolved is null and n.Status = 'Active');
         
 	SET LowBattery = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 

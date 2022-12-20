@@ -9,7 +9,7 @@ BEGIN
 		(SELECT Descr FROM node_alarm_log as alarm
 		LEFT JOIN node_details as n on n.NodeID = alarm.NodeID and n.NetworkID and n.NodeType = nodeType
 		where alarm.IsResolved is null 
-		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
 		and n.Status = 'Active'
 		group by Descr
 		order by count(Descr) desc

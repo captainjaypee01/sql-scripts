@@ -8,17 +8,21 @@ BEGIN
     DECLARE cursor_i CURSOR FOR (Select count(distinct alarm.NodeID) As OfflineDevice, BuildingName from node_details As n JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In ('FireExtinguisher')
 		where n.Status = 'Active'
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
-		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
         and alarm.Descr = 'Node is Offline'
 		group by BuildingName, alarm.NodeID, n.NodeID, alarm.NetworkID, n.NetworkID, n.NodeType, alarm.IsResolved
 		having alarm.IsResolved is null );
     
-    DECLARE cursor_alert CURSOR FOR SELECT count(*) As AlertDevice, BuildingName FROM node_fx_logic As fx JOIN node_details As n on n.NodeID = fx.NodeID 
-    and n.NetworkID in (SELECT NetworkID FROM users_network where UserID = userIDVal)
-    group by n.BuildingName, n.NodeType, n.NodeID, fx.NodeID, fx.Leak2, fx.ForeignObj, fx.Missing, fx.Blockage, n.NetworkID   
-    having n.NodeType = 'FireExtinguisher' and fx.Leak2 = 1 or fx.ForeignObj = 1 or fx.Missing = 1 or fx.Blockage = 1
-    and n.NetworkID in (SELECT un.NetworkID FROM users_network un where un.UserID COLLATE utf8mb4_general_ci  = userIDVal);
+    DECLARE cursor_alert CURSOR FOR (Select count(distinct alarm.NodeID) As AlertDevice, BuildingName from node_details As n JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In ('FireExtinguisher')
+		where n.Status = 'Active'
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+        and alarm.Descr not in ('Low Battery', 'Node is Offline')
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		group by BuildingName, alarm.NodeID, n.NodeID, alarm.NetworkID, n.NetworkID, n.NodeType, alarm.IsResolved
+		having alarm.IsResolved is null );
+        
     
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
     DELETE FROM `node_operational_status` WHERE NodeType = 'FireExtinguisher';
@@ -31,7 +35,7 @@ BEGIN
         `NodeType`)
         SELECT BuildingName, count(*) As MonitoredDevice, count(*) As Operational, 0,0,'FireExtinguisher' FROM node_details as n
         where n.Status = 'Active'
-        and n.NetworkID in (SELECT un.NetworkID FROM users_network un where un.UserID = userIDVal)
+        and n.NetworkID in (SELECT un.NetworkID FROM users_network un where un.UserID COLLATE utf8mb4_general_ci = userIDVal)
         group by n.BuildingName, n.NodeType having NodeType = 'FireExtinguisher';
             
         OPEN cursor_i;
