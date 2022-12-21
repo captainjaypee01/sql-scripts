@@ -6,7 +6,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `FireSafetyandEmergencyOverall`(
 
 )
 BEGIN
-
 	DECLARE MonitoredDevices INT;
 	DECLARE OfflineDevices INT;
 	DECLARE AlertDevicesFire INT;
@@ -14,6 +13,7 @@ BEGIN
 	DECLARE LowBattery INT;
 	DECLARE AlertDevicesExitEmerg INT;
 	DECLARE AlertDevices INT;
+    DECLARE AllAlerts INT;
  
 	SET MonitoredDevices = (Select count(*) As MonitoredDevices from node_details as n 
 		where n.Status = 'Active' and NodeType In (NodeTypeValOne,NodeTypeValTwo,NodeTypeValThree) 
@@ -49,8 +49,19 @@ BEGIN
 		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
 		and alarm.Descr = 'Low Battery');
         
+	SET AllAlerts = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (NodeTypeValOne,NodeTypeValTwo,NodeTypeValThree) and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		where alarm.IsResolved is null
+        and n.Status = 'Active'
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and alarm.Descr not in ('Low Battery'));
+        
 	SET AlertDevices = AlertDevicesFire + AlertDevicesExitEmerg;
-	SET OperationalDevices = MonitoredDevices - (OfflineDevices + AlertDevices);
+    SET OperationalDevices = CASE WHEN 
+                            (MonitoredDevices > AllAlerts) THEN (MonitoredDevices - AllAlerts)
+                            ELSE 0
+                        END;
 	Select MonitoredDevices As MonitoredDevices, OperationalDevices As OperationalDevices, AlertDevices As AlertDevices, OfflineDevices As OfflineDevices, LowBattery As LowBattery; 
 
 END

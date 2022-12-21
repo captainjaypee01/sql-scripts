@@ -11,6 +11,7 @@ BEGIN
 	DECLARE LowBattery INT;
 	DECLARE AlertDevicesLowBattery INT;
 	DECLARE AlertDevicesFire INT;
+    DECLARE AllAlerts INT;
 
 	SET MonitoredDevices = (Select count(*) As MonitoredDevices from node_details as n 
 			where n.Status = 'Active' and NodeType In (nodeTypeValue) 
@@ -26,7 +27,9 @@ BEGIN
     SET AlertDevices = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (nodeTypeValue)
 		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
-		where alarm.IsResolved is null and n.Status = 'Active');
+		where alarm.IsResolved is null 
+        and alarm.Descr not in ('Low Battery', 'Node is Offline')
+        and n.Status = 'Active');
         
 	SET LowBattery = (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
 		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
@@ -35,7 +38,21 @@ BEGIN
         and n.NodeType in (nodeTypeValue)
 		and alarm.Descr = 'Low Battery');
         
-	SET OperationalDevices = MonitoredDevices - (OfflineDevices + AlertDevices);
+	SET AllAlerts= (Select count(distinct alarm.NodeID) As LowBattery from node_details As n JOIN node_alarm_log As alarm 
+		on n.NodeID = alarm.NodeID and n.NetworkID = alarm.NetworkID and n.NodeType In (nodeTypeValue)
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		where n.Status = 'Active' 
+        and alarm.IsResolved is null
+        and alarm.Descr not in ('Low Battery')
+		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and alarm.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal));
+        
+	SET OperationalDevices = CASE WHEN 
+                            (MonitoredDevices > (AllAlerts)) THEN (MonitoredDevices - (AllAlerts))
+                            ELSE 0
+                        END;
+    
+    
 	if(nodeTypeValue = 'EmergLight') then
 	Select 'Emergency Light' As Devices, MonitoredDevices As Total, OperationalDevices As Operational, AlertDevices As WarningAlert, OfflineDevices as OfflineDevice, LowBattery as LowBattery;  
 	else
