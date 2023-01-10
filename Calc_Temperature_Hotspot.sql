@@ -1,5 +1,6 @@
 CREATE DEFINER=`root`@`localhost` PROCEDURE `Calc_Temperature_Hotspot`(
-userIDVal varchar(255)
+	in NetworkList varchar(255),
+	in NodeTypes varchar(255)
 )
 BEGIN
 
@@ -9,15 +10,16 @@ DECLARE cursor_Sector VARCHAR(255);
 DECLARE cursor_Val VARCHAR(255);
 DECLARE cursor_ValTwo VARCHAR(255);
 DECLARE done INT DEFAULT FALSE;
+
 DECLARE cursor_maximum CURSOR FOR SELECT n.BuildingName, n.SectorName, Max(SensorValue02) Maximum, Min(SensorValue02) Minimum FROM node_latest_readings As reading 
-JOIN node_details As n on n.NodeID = reading.NodeID and n.NetworkID = reading.NetworkID and n.Status = 'Active'
-group by n.BuildingName,n.SectorName, SensorValue02, n.NodeType, reading.updated_at, n.NetworkID having n.NodeType = 'FireExtinguisher'
-and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci  = userIDVal);
+LEFT JOIN node_details As n on n.NodeID = reading.NodeID and n.NetworkID = reading.NetworkID and n.Status = 'Active'
+where FIND_IN_SET (n.NodeType, NodeTypes) and FIND_IN_SET (n.NetworkID, NetworkList) and updated_at > UTC_TIMESTAMP() - interval 1 hour
+group by n.BuildingName,n.SectorName; 
 
 DECLARE cursor_current CURSOR FOR SELECT n.BuildingName, n.SectorName, Max(SensorValue02) Maximum FROM node_latest_readings As reading 
 JOIN node_details As n on n.NodeID = reading.NodeID and n.NetworkID = reading.NetworkID and n.Status = 'Active'
-group by n.BuildingName,n.SectorName, SensorValue02, n.NodeType, reading.updated_at, n.NetworkID 
-having n.NodeType = 'FireExtinguisher' and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci  = userIDVal);
+where FIND_IN_SET (n.NodeType, NodeTypes) and FIND_IN_SET (n.NetworkID, NetworkList) and updated_at > UTC_TIMESTAMP() - interval 1 hour
+group by n.BuildingName,n.SectorName; 
 
 DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
 
@@ -31,8 +33,10 @@ INSERT INTO `temperature_hotspot`
     `total_node`
     )
 SELECT BuildingName As Location, SectorName As Sector, 0,0,0,0
-FROM node_details group by BuildingName, SectorName, NodeType, NetworkID having NodeType = 'FireExtinguisher'
-and NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci  = userIDVal);
+FROM node_details as nd 
+LEFT JOIN node_latest_readings as nlr on nlr.NetworkID = nd.NetworkID and nlr.NodeID = nd.NodeID
+WHERE nd.Status = 'Active' group by nd.BuildingName, nd.SectorName, nd.NodeType, nd.NetworkID 
+having FIND_IN_SET (NodeType, NodeTypes) and FIND_IN_SET (NetworkID, NetworkList);
     	
 OPEN cursor_maximum;
   read_maximum_loop: LOOP
