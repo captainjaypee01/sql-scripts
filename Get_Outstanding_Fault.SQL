@@ -1,5 +1,5 @@
 CREATE DEFINER=`root`@`localhost` PROCEDURE `Get_Outstanding_Fault`(
-	userIDVal varchar(255),
+    in NetworkList varchar(255),
 	timezoneOffset varchar(255),
     in NodeTypes varchar(255),
     inital bool
@@ -23,7 +23,7 @@ BEGIN
 					and al.IsResolved is null 
 					and al.Descr not in ('Low Battery', 'Node is Offline')
 					and n.Status = 'Active'
-					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID COLLATE utf8mb4_general_ci  = userIDVal)
+					and FIND_IN_SET (al.NetworkID, NetworkList)
 					
 					group by al.NodeID
 					order by al.id desc
@@ -40,7 +40,7 @@ BEGIN
 					FROM node_alarm_log As al 
 					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
 					where FIND_IN_SET (n.NodeType, NodeTypes)
-					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID  COLLATE utf8mb4_general_ci = userIDVal)
+					and FIND_IN_SET (al.NetworkID, NetworkList)
 					and n.Status = 'Active'
 					and al.Descr = 'Low Battery'
 					and al.IsResolved is null 
@@ -61,7 +61,7 @@ BEGIN
 					#		on al.NodeID = alarm2.nodeid and al.created_at = alarm2.createdDate
 					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
 					where FIND_IN_SET (n.NodeType, NodeTypes)
-					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID COLLATE utf8mb4_general_ci  = userIDVal)
+					and FIND_IN_SET (al.NetworkID, NetworkList)
 					and n.Status = 'Active'
 					and al.Descr = 'Node is Offline'
 					and al.IsResolved is null 
@@ -91,7 +91,7 @@ BEGIN
 					and al.IsResolved is null 
 					and al.Descr not in ('Low Battery', 'Node is Offline')
 					and n.Status = 'Active'
-					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID  COLLATE utf8mb4_general_ci = userIDVal)
+					and FIND_IN_SET (al.NetworkID, NetworkList)
 					
 					group by al.NodeID
 					order by al.id desc
@@ -108,7 +108,7 @@ BEGIN
 					FROM node_alarm_log As al 
 					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
 					where FIND_IN_SET (n.NodeType, NodeTypes)
-					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID  COLLATE utf8mb4_general_ci = userIDVal)
+					and FIND_IN_SET (al.NetworkID, NetworkList)
 					and n.Status = 'Active'
 					and al.Descr = 'Low Battery'
 					and al.IsResolved is null 
@@ -129,7 +129,7 @@ BEGIN
 					#		on al.NodeID = alarm2.nodeid and al.created_at = alarm2.createdDate
 					LEFT JOIN node_details As n on n.NodeID = al.NodeID and n.NetworkID = al.NetworkID
 					where FIND_IN_SET (n.NodeType, NodeTypes)
-					and al.NetworkID in (SELECT NetworkID FROM users_network un where un.UserID  COLLATE utf8mb4_general_ci = userIDVal)
+					and FIND_IN_SET (al.NetworkID, NetworkList)
 					and n.Status = 'Active'
 					and al.Descr = 'Node is Offline'
 					and al.IsResolved is null 

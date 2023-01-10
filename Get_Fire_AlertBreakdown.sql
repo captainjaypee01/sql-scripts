@@ -1,5 +1,5 @@
 CREATE DEFINER=`root`@`localhost` PROCEDURE `Get_Fire_AlertBreakdown`(
-userIDVal varchar(255)
+    in NetworkList varchar(255)
 )
 BEGIN
 
@@ -12,7 +12,7 @@ BEGIN
 		on n.NodeID = alarm.NodeID
         and n.NodeType In ('FireExtinguisher')  and n.NetworkID = alarm.NetworkID
 		where n.Status = 'Active' 
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and FIND_IN_SET (n.NetworkID, NetworkList)
 		and alarm.Descr like '%Leak%'
         and alarm.IsResolved is null
         );
@@ -21,7 +21,7 @@ BEGIN
 		on n.NodeID = alarm.NodeID
         and n.NodeType In ('FireExtinguisher')  and n.NetworkID = alarm.NetworkID
 		where n.Status = 'Active' 
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and FIND_IN_SET (n.NetworkID, NetworkList)
 		and alarm.Descr like '%Foreign Object%'
         and alarm.IsResolved is null
         );
@@ -30,7 +30,7 @@ BEGIN
 		on n.NodeID = alarm.NodeID
         and n.NodeType In ('FireExtinguisher')  and n.NetworkID = alarm.NetworkID
 		where n.Status = 'Active' 
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and FIND_IN_SET (n.NetworkID, NetworkList)
 		and alarm.Descr like '%Missing%'
         and alarm.IsResolved is null
         );
@@ -39,7 +39,7 @@ BEGIN
 		on n.NodeID = alarm.NodeID
         and n.NodeType In ('FireExtinguisher')  and n.NetworkID = alarm.NetworkID
 		where n.Status = 'Active' 
-		and n.NetworkID in (SELECT NetworkID FROM users_network where UserID COLLATE utf8mb4_general_ci = userIDVal)
+		and FIND_IN_SET (n.NetworkID, NetworkList)
 		and alarm.Descr like '%Blocked%'
         and alarm.IsResolved is null
         );
